@@ -19,7 +19,10 @@ def init_redis():
         import redis
         from config.settings import settings
         
-        if not settings.redis_url or settings.redis_url == "redis://localhost:6379":
+        # Disable Redis if not configured or set to localhost/none
+        if (not settings.redis_url or 
+            settings.redis_url in ["redis://localhost:6379", "none", ""] or
+            "localhost" in settings.redis_url):
             logger.info("⏸️ Redis not configured, caching disabled")
             return
         

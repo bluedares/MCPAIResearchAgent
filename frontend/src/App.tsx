@@ -25,7 +25,8 @@ function App() {
 
   // Fetch config on mount
   useEffect(() => {
-    fetch('http://localhost:8000/api/config')
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    fetch(`${apiUrl}/api/config`)
       .then(res => res.json())
       .then(data => setEmailEnabled(data.email_enabled))
       .catch(err => console.error('Failed to fetch config:', err))
@@ -43,8 +44,9 @@ function App() {
     setError('')
 
     try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       const workflowId = `workflow-${Date.now()}`
-      const url = `http://localhost:8000/api/research/${workflowId}/stream?topic=${encodeURIComponent(topic)}&client_email=${encodeURIComponent(email || 'display@ui.local')}`
+      const url = `${apiUrl}/api/research/${workflowId}/stream?topic=${encodeURIComponent(topic)}&client_email=${encodeURIComponent(email || 'display@ui.local')}`
 
       const eventSource = new EventSource(url)
 

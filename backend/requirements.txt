@@ -1,0 +1,53 @@
+# Core Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+
+# LangChain & LangGraph (Python 3.9 compatible versions)
+langchain==0.2.16
+langchain-anthropic==0.1.23
+langchain-community==0.2.16
+langgraph==0.1.19
+langsmith==0.1.99
+
+# Anthropic
+anthropic==0.34.2
+
+# Pydantic (Validation)
+pydantic==2.8.2
+pydantic-settings==2.4.0
+
+# Database
+sqlalchemy==2.0.31
+alembic==1.13.2
+psycopg2-binary==2.9.9  # PostgreSQL driver
+aiosqlite==0.19.0  # Async SQLite
+
+# Redis (optional - for caching)
+redis==5.0.8
+hiredis==2.3.2
+
+# HTTP & Async
+httpx==0.27.0
+aiohttp==3.9.5
+sse-starlette==2.1.0  # Server-Sent Events
+
+# Utilities
+python-multipart==0.0.9
+email-validator==2.2.0
+tenacity==8.5.0  # Retry logic
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.8
+pytest-cov==5.0.0
+pytest-mock==3.14.0
+
+# Development
+black==24.4.2
+ruff==0.5.0
+mypy==1.10.1
+pre-commit==3.7.1
+
+# Security
+cryptography==42.0.8  # For token encryption

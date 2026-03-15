@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mcp-research-postgres
+    environment:
+      POSTGRES_DB: research_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-research-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Gmail MCP Server
+  gmail-mcp:
+    build:
+      context: ./mcp_servers/gmail
+      dockerfile: Dockerfile
+    container_name: mcp-gmail-server
+    environment:
+      - PORT=3001
+      - GMAIL_CREDENTIALS_PATH=/app/credentials.json
+      - GMAIL_TOKEN_PATH=/app/token.json
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount credentials (must exist locally)
+      - ./mcp_servers/gmail/credentials.json:/app/credentials.json:ro
+      - ./mcp_servers/gmail/token.json:/app/token.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Search MCP Server
+  search-mcp:
+    build:
+      context: ./mcp_servers/search
+      dockerfile: Dockerfile
+    container_name: mcp-search-server
+    environment:
+      - PORT=3002
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mcp-research-backend
+    environment:
+      # API Keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      
+      # LangSmith Config
+      - LANGSMITH_PROJECT=mcp-research-agent
+      - LANGSMITH_TRACING_V2=true
+      
+      # MCP Server URLs
+      - GMAIL_MCP_URL=http://gmail-mcp:3001
+      - SEARCH_MCP_URL=http://search-mcp:3002
+      
+      # Database
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/research_agent
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379
+      
+      # App Config
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - MAX_SUB_QUERIES=5
+      - MAX_RETRY_ATTEMPTS=2
+      
+      # CORS
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gmail-mcp:
+        condition: service_healthy
+      search-mcp:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_cache:/root/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend (Development)
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: mcp-research-frontend-dev
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+    profiles:
+      - dev
+
+  # Frontend (Production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mcp-research-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - prod
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_cache:
+    driver: local
+
+networks:
+  default:
+    name: mcp-research-network

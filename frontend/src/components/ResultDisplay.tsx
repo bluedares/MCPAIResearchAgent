@@ -41,7 +41,7 @@ export function ResultDisplay({ summary, citations, emailSent, clientEmail, veri
     setSendSuccess(false)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
       const response = await fetch(`${apiUrl}/api/send-email`, {
         method: 'POST',
         headers: {

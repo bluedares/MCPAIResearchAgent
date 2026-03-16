@@ -25,7 +25,7 @@ function App() {
 
   // Fetch config on mount
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
     fetch(`${apiUrl}/api/config`)
       .then(res => res.json())
       .then(data => setEmailEnabled(data.email_enabled))
@@ -44,7 +44,7 @@ function App() {
     setError('')
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
       const workflowId = `workflow-${Date.now()}`
       const url = `${apiUrl}/api/research/${workflowId}/stream?topic=${encodeURIComponent(topic)}&client_email=${encodeURIComponent(email || 'display@ui.local')}`
 
